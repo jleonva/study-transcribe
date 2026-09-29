@@ -1,0 +1,4 @@
+-r requirements-core.txt
+pix2tex==0.1.4
+torch==2.13.0
+torchvision==0.28.0

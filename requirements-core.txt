@@ -1,0 +1,4 @@
+pymupdf==1.28.2
+pymupdf4llm==1.28.2
+Pillow==12.3.0
+onnxruntime==1.19.2
