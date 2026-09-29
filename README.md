@@ -50,3 +50,18 @@ The original PDF is read, never overwritten. By default, the program does not se
 ## Source and license
 
 The `vendor/pdf_to_markdown/converter` directory contains code from [mbackschat/pdf-to-markdown-skill](https://github.com/mbackschat/pdf-to-markdown-skill), distributed under its own [MIT license](vendor/pdf_to_markdown/LICENSE). The project scripts and documentation are MIT licensed under [LICENSE](LICENSE). PyMuPDF, PyMuPDF4LLM, pix2tex, and their dependencies keep their own licenses.
+
+## Local web interface
+
+Install the web dependency in the repository environment:
+
+```powershell
+& $python -m pip install -r requirements-web.txt
+& $python webapp\app.py
+```
+
+Open `http://127.0.0.1:5000`. Enter a folder containing PDFs, scan it, inspect a PDF's table of contents, configure a chapter or page range, and queue the job. Jobs run sequentially and stream the existing `run.py` output. The default output remains `Documents\StudyTranscriptions`, but it can be changed in the interface.
+
+The review link shows the generated Markdown and `manifest.json`. Pending figures, scanned pages, and unresolved formula crops remain subject to the existing `finalize.py` validation.
+
+For one-click startup, double-click `StudyTranscribe.exe` in the repository root. It starts the repository's `.venv`, launches the local server, and opens the browser at `http://127.0.0.1:5000`. The executable must remain beside `.venv`, `webapp`, and `scripts`. Alternatively, double-click `start-web.cmd` or run `start-web.ps1` from PowerShell.
