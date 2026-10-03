@@ -21,7 +21,7 @@ class JobManager:
         self.state_root.mkdir(parents=True, exist_ok=True)
         self.state_path = self.state_root / ".study-transcribe-jobs.json"
         self._lock = threading.RLock(); self._running = False
-        self._events: dict[str, list[dict]] = {}; self._event_queues: dict[str, list[queue.Queue]] = {}
+        self._events: dict[str, list[dict]] = {}; self._event_queues: dict[str, list[queue.Queue]] = {}; self._processes: dict[str, subprocess.Popen] = {}
         self.jobs: dict[str, dict] = self._load()
 
     def _load(self) -> dict[str, dict]:
@@ -76,20 +76,51 @@ class JobManager:
         with self._lock: self.jobs[job_id] = job; self._save()
         return job
 
+    def remove(self, job_id: str) -> dict:
+        """Remove a finished job from the queue without deleting its output."""
+        with self._lock:
+            job = self.jobs.get(job_id)
+            if not job:
+                raise ValueError("unknown job")
+            process = self._processes.get(job_id)
+            if process and process.poll() is None:
+                process.terminate()
+            del self.jobs[job_id]
+            self._events.pop(job_id, None)
+            self._event_queues.pop(job_id, None)
+            self._processes.pop(job_id, None)
+            self._save()
+        return job
+
     def start(self) -> None:
         with self._lock:
             if self._running: return
             self._running = True
         threading.Thread(target=self._worker, daemon=True).start()
 
-    def _worker(self) -> None:
+    def start_job(self, job_id: str) -> None:
+        """Run one queued job and leave the rest of the queue untouched."""
+        with self._lock:
+            if self._running:
+                raise ValueError("another transcription is already running")
+            job = self.jobs.get(job_id)
+            if not job:
+                raise ValueError("unknown job")
+            if job["status"] != "queued":
+                raise ValueError("only queued jobs can be started")
+            self._running = True
+        threading.Thread(target=self._worker, args=(job_id,), daemon=True).start()
+
+    def _worker(self, job_id: str | None = None) -> None:
         try:
             while True:
                 with self._lock:
-                    job = next((j for j in self.jobs.values() if j["status"] == "queued"), None)
+                    job = self.jobs.get(job_id) if job_id else next((j for j in self.jobs.values() if j["status"] == "queued"), None)
+                    if job and job["status"] != "queued": job = None
                     if not job: return
                     job["status"] = "running"; job["started_at"] = now(); self._save()
                 self._run_one(job)
+                if job_id: return
         finally:
             with self._lock: self._running = False
 
@@ -99,8 +130,14 @@ class JobManager:
         for option, enabled in job["options"].items():
             if enabled: args.append("--" + option.replace("_", "-"))
         self._emit(job["id"], "started", "Running transcription pipeline")
+        proc: subprocess.Popen | None = None
         try:
             proc = subprocess.Popen(args, cwd=self.repo_root, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace", bufsize=1)
+            with self._lock:
+                if job["id"] not in self.jobs:
+                    proc.terminate()
+                    return
+                self._processes[job["id"]] = proc
             assert proc.stdout is not None
             for line in proc.stdout: self._emit(job["id"], "log", line.rstrip())
             code = proc.wait()
@@ -113,3 +150,6 @@ class JobManager:
             with self._lock:
                 job["status"] = "failed"; job["finished_at"] = now(); job["error"] = str(exc); self._save()
             self._emit(job["id"], "failed", str(exc))
+        finally:
+            with self._lock:
+                self._processes.pop(job["id"], None)

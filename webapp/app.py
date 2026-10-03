@@ -35,6 +35,24 @@ def scan_folder():
     files = [{"name": p.name, "path": str(p), "size": p.stat().st_size} for p in sorted(folder.iterdir(), key=lambda x: x.name.lower()) if p.is_file() and p.suffix.lower() == ".pdf"]
     return jsonify(folder=str(folder), files=files)
 
+@app.post("/api/select-folder")
+def select_folder():
+    data = body()
+    initial = Path(data.get("initial", "")).expanduser()
+    if not initial.is_dir(): initial = Path.home()
+    title = str(data.get("title") or "Select folder")[:80]
+
+    import tkinter as tk
+    from tkinter import filedialog
+    root = tk.Tk()
+    root.withdraw()
+    root.attributes("-topmost", True)
+    try:
+        selected = filedialog.askdirectory(initialdir=str(initial), title=title, parent=root)
+    finally:
+        root.destroy()
+    return jsonify(folder=selected)
+
 @app.get("/api/pdf/toc")
 def pdf_toc():
     pdf, folder = Path(request.args.get("path", "")).resolve(), Path(request.args.get("folder", "")).resolve()
@@ -51,8 +69,18 @@ def create_job():
 @app.get("/api/jobs")
 def list_jobs(): return jsonify(list(manager.jobs.values()))
 
+@app.delete("/api/jobs/<job_id>")
+def delete_job(job_id: str):
+    manager.remove(job_id)
+    return jsonify(removed=True)
+
 @app.post("/api/jobs/start")
 def start_jobs(): manager.start(); return jsonify(started=True)
+
+@app.post("/api/jobs/<job_id>/start")
+def start_job(job_id: str):
+    manager.start_job(job_id)
+    return jsonify(started=True)
 
 @app.get("/api/jobs/<job_id>/events")
 def events(job_id: str):
@@ -78,6 +106,15 @@ def result_dir(job: dict) -> Path:
         except (OSError, json.JSONDecodeError):
             continue
     raise ValueError("job output is not available yet")
+
+@app.post("/api/jobs/<job_id>/open-output")
+def open_output(job_id: str):
+    job = manager.jobs.get(job_id)
+    if not job: raise ValueError("unknown job")
+    if job["status"] != "completed": raise ValueError("output is available after a job completes")
+    folder = result_dir(job)
+    os.startfile(str(folder))
+    return jsonify(opened=True, folder=str(folder))
 
 @app.get("/api/jobs/<job_id>/manifest")
 def manifest(job_id: str):

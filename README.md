@@ -4,17 +4,18 @@ Convert a chapter or page range from an academic PDF to study-ready Markdown. Na
 
 **Best for:** born-digital PDFs with selectable text. **Scanned pages:** detected and stopped by default. `--allow-scanned` saves page images for a person or an agent to transcribe; it does not run general OCR. Figures and uncertain formulas may also need review. The script cannot guarantee a complete transcription without checking `manifest.json`.
 
-## Install on Windows
+## Install and run the web app on Windows
 
 Install [Python 3.11](https://www.python.org/downloads/) and [Git](https://git-scm.com/download/win), then open PowerShell:
 
 ```powershell
 git clone https://github.com/jleonva/study-transcribe.git
 cd study-transcribe
-py -3.11 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install --upgrade pip
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\setup.ps1
+.\start-web.cmd
 ```
+
+The setup script creates `.venv` and installs everything in `requirements.txt`, including the web interface. If PowerShell blocks local scripts, use `powershell -ExecutionPolicy Bypass -File .\setup.ps1` instead. After setup, you can also double-click `start-web.cmd` to launch the app. Open `http://127.0.0.1:5000` if the browser does not open automatically.
 
 The dependency installation includes PyTorch and can take significant disk space and time. On the first formula-OCR run, pix2tex may download model weights. An internet connection is needed for installation and that first download; processing after setup is local. For text-only extraction, you can install `requirements-core.txt` instead and pass `--no-formula-ocr` or `--prose` on every run.
 
@@ -53,15 +54,10 @@ The `vendor/pdf_to_markdown/converter` directory contains code from [mbackschat/
 
 ## Local web interface
 
-Install the web dependency in the repository environment:
+Run `./start-web.ps1` after completing setup. On a new clone, it automatically runs `setup.ps1` if the local environment has not been created yet. Open `http://127.0.0.1:5000`.
 
-```powershell
-& $python -m pip install -r requirements-web.txt
-& $python webapp\app.py
-```
+Use **Select folder** beside the input and output fields to choose folders in Windows Explorer. After scanning, choose one PDF from the dropdown, select a page range or a chapter from its Table of Contents, configure the transcription options, and add it to the queue. The chapter list preserves its hierarchy and shows each chapter's starting page.
 
-Open `http://127.0.0.1:5000`. Enter a folder containing PDFs, scan it, inspect a PDF's table of contents, configure a chapter or page range, and queue the job. Jobs run sequentially and stream the existing `run.py` output. The default output remains `Documents\StudyTranscriptions`, but it can be changed in the interface.
-
-The review link shows the generated Markdown and `manifest.json`. Pending figures, scanned pages, and unresolved formula crops remain subject to the existing `finalize.py` validation.
+The queue keeps a scrollable history with status, selection details, timestamps, duration, and failure messages. Its status icons are blue ▶ for queued work, green ▶ while transcribing, green ✓ when complete, and red ! for failures. **Run all jobs** starts only queued work; **Run job** starts one selected queued item. Any job can be removed with its trash button without deleting generated files; removing a running job stops its transcription. Completed jobs can also open their output folder. The review link shows the generated Markdown and `manifest.json`. Pending figures, scanned pages, and unresolved formula crops remain subject to the existing `finalize.py` validation.
 
 For one-click startup, double-click `StudyTranscribe.exe` in the repository root. It starts the repository's `.venv`, launches the local server, and opens the browser at `http://127.0.0.1:5000`. The executable must remain beside `.venv`, `webapp`, and `scripts`. Alternatively, double-click `start-web.cmd` or run `start-web.ps1` from PowerShell.
