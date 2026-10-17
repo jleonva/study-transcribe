@@ -45,7 +45,9 @@ To use it as an agent skill, clone the repository into your agent's skills folde
 
 ## Limits and privacy
 
-The original PDF is read, never overwritten. By default, the program does not send PDF contents to a service. It uses installed Python packages and local model weights. `--allow-scanned` only creates page images; if you later give them to a cloud agent or OCR service, that is a separate action. Formula recognition and PDF layout extraction can make mistakes. Check equations, figures, and column order before relying on the output.
+The original PDF is read, never overwritten. By default, the program does not send PDF contents to a service. It uses installed Python packages and local model weights. `--allow-scanned` only creates page images; if you later give them to a cloud agent or OCR service, that is a separate action. Formula recognition only attempts image crops selected by a heuristic; vector/display equations may be missed, and diagrams may be false positives. Check equations, figures, and column order before relying on the output.
+
+Repeated lines are preserved during document-wide cleanup because repetition without page-position evidence can also be meaningful content.
 
 ## Source and license
 

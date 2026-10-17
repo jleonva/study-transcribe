@@ -10,9 +10,8 @@ Polytechnique probability course PDF) without ever paraphrasing content:
 2. Ligature expansion — ﬁ ﬂ ﬀ ﬃ ﬄ → fi fl ff ffi ffl.
 3. Known math-glyph mojibake — "7→" is how \\mapsto extracts from Computer
    Modern fonts; restored to "↦" when preceded by whitespace.
-4. Running header/footer removal — standalone page-number lines, and any
-   short line repeated 3+ times across the document (chapter-name banners,
-   course footers). Repetition is the signal, so real prose is never touched.
+4. Conservative page-number removal — repeated lines are retained because
+   this assembled-text pass has no page-position metadata.
 5. Blank-line collapsing.
 
 Everything here is a pure text transform: no reordering, no rewording.
@@ -22,7 +21,6 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from collections import Counter
 
 # spacing accent char -> combining accent char
 _SPACING_TO_COMBINING = {
@@ -89,45 +87,23 @@ def fix_known_ocr_misreadings(text: str) -> str:
 
 
 _PAGE_NUMBER_LINE = re.compile(r"^\s*(?:\d{1,4}|[ivxlcdm]{1,7})\s*$", re.IGNORECASE)
-# blockquotes (>) are protected too: figure stubs/descriptions are emitted as
-# blockquotes and may legitimately repeat verbatim many times — running
-# headers in extracted PDFs never surface as "> " lines
-_MD_STRUCTURAL = re.compile(r"^\s*(?:#{1,6}\s|!\[|\||```|\$\$|<!--|>)")
-
-
-def _banner_key(line: str) -> str | None:
-    """Candidate running-header/footer lines: short, not markdown structure,
-    normalized so 'CHAPITRE 3.  TITLE' on every page collapses to one key."""
-    stripped = line.strip()
-    if not stripped or len(stripped) > 80 or _MD_STRUCTURAL.match(line):
-        return None
-    key = re.sub(r"\s+", " ", stripped.lower())
-    key = re.sub(r"\d+", "#", key)  # page numbers inside banners vary
-    return key
-
-
 def remove_running_banners(text: str, min_repeats: int = 3) -> tuple[str, list[str]]:
-    """Drop standalone page-number lines and short lines whose normalized
-    form repeats >= min_repeats times (running chapter/course banners).
-    Returns (cleaned_text, removed_banner_examples) for the audit manifest."""
-    lines = text.splitlines()
-    counts = Counter(k for line in lines if (k := _banner_key(line)) is not None)
-    banner_keys = {k for k, n in counts.items() if n >= min_repeats}
+    """Drop standalone page-number lines only.
 
-    removed_examples: dict[str, str] = {}
+    This function receives assembled text without page-position metadata.
+    Repetition alone is not enough evidence to classify content as a banner.
+    The legacy argument remains for API compatibility.
+    """
+    lines = text.splitlines()
     kept: list[str] = []
     for line in lines:
         if _PAGE_NUMBER_LINE.match(line):
-            continue
-        key = _banner_key(line)
-        if key is not None and key in banner_keys:
-            removed_examples.setdefault(key, line.strip())
             continue
         kept.append(line)
 
     cleaned = "\n".join(kept)
     cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
-    return cleaned, sorted(removed_examples.values())
+    return cleaned, []
 
 
 _DISPLAY_MATH_RE = re.compile(r"\$\$(.+?)\$\$", re.S)

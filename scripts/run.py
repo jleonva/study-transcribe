@@ -11,7 +11,7 @@ Pipeline (all offline/open-source, no Mathpix, no network):
      Markdown (no generic OCR; analyze the PNG later on demand).
   5. Equation image crops → pix2tex (LaTeX-OCR) locally → $$latex$$ text.
   6. Study cleanup: recompose LaTeX-PDF accents/ligatures, fix \\mapsto
-     mojibake, strip running headers/footers and page numbers.
+     mojibake, strip standalone page numbers, and preserve repeated content.
   7. Write <slug>.md (YAML frontmatter) + <slug>_images/ + manifest.json.
 
 Usage (run with the project venv Python; see README.md):
