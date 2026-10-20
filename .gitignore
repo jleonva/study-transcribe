@@ -1,4 +1,10 @@
 .venv/
+.venv-math/
+node_modules/
+models/
+*.onnx
+*.safetensors
+*.pt
 __pycache__/
 *.py[cod]
 *.pdf

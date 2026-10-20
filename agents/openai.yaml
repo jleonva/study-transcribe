@@ -1,0 +1,4 @@
+interface:
+  display_name: "Study Transcribe"
+  short_description: "OCR matemático local con revisión de ecuaciones"
+  default_prompt: "Usa $study-transcribe para convertir un capítulo PDF a Markdown, JSON y HTML con modelos locales."

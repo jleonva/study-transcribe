@@ -1,5 +1,45 @@
 # Study Transcribe
 
+Local mathematical PDF transcription for agent-assisted study: **PDF → Markdown + JSON + offline HTML**. Pix2Text handles scanned or native pages using local CPU models; no hosted OCR API is used. The coordinating assistant can still consume tokens.
+
+## Math agent: use on another computer
+
+Clone into your agent's skills directory (Codex: `~/.agents/skills/study-transcribe`; Claude Code: `~/.claude/skills/study-transcribe`), or clone anywhere and point the agent to `SKILL.md`:
+
+```sh
+git clone https://github.com/jleonva/study-transcribe.git
+cd study-transcribe
+```
+
+With **Python 3.11**, install the isolated CPU runtime. Windows PowerShell:
+
+```powershell
+py -3.11 scripts/setup_math.py
+$python = '.\.venv-math\Scripts\python.exe'
+& $python scripts/new_math_project.py 'C:\books\book.pdf' --pages 16-39 --output 'C:\transcripts\chapter'
+& $python scripts/setup_math.py --assets-only --assets 'C:\transcripts\chapter\vendor'
+& $python scripts/local_math_batch.py --config 'C:\transcripts\chapter\pilot.json' --prepare
+& $python scripts/local_math_batch.py --config 'C:\transcripts\chapter\pilot.json'
+& $python scripts/build_math_review.py --config 'C:\transcripts\chapter\pilot.json'
+& $python scripts/audit_math_pilot.py --config 'C:\transcripts\chapter\pilot.json' --verify-originals
+```
+
+On Linux/macOS, use `python3.11 scripts/setup_math.py`, then `.venv-math/bin/python` with your local paths. **Windows CPU is tested; other operating systems are not yet validated.** No Python executable, drive letter, user account or existing model cache is assumed on another computer. An internet connection is needed for initial installation and model/HTML-asset downloads. Documents remain local. Books, runtimes and weights are not included in GitHub.
+
+Open `review.html` in the output folder. Each book has `chapter.md`, `chapter.json`, source excerpts and raw outputs. The reader embeds figures, math rendering and review controls. Model files default to `~/.cache/study-transcribe`; `--model-root` chooses another location. Configured model budget is 5 GB; the pilot's two engines occupied about 1.1 GB.
+
+Ask the agent: **“Usa $study-transcribe para transcribir este capítulo con modelos locales.”** Start a new agent session after installing the skill so it can be discovered. Update the checkout with `git pull --ff-only`; update the runtime deliberately when dependency pins change. The scripts can also run without an agent.
+
+New projects show detected equations by default. The original pilot additionally used a fixed 15-equation source sample. A `human-review.json` declaration can record global user acceptance without fabricating individual HTML answers. Preserve raw OCR separately.
+
+## Observed pilot
+
+79 pages completed across Shreve, Boyd and Williams; 262 display-formula blocks detected. On **2026-10-19 the user accepted all equations in the delivered pilot**, through a global conversation statement rather than individual form entries. This is qualitative user validation, not a measured accuracy percentage or a guarantee for other PDFs. See [pilot evidence and limits](LOCAL_MATH_PILOT.md) and [possible improvements](docs/IMPROVEMENTS.md).
+
+## Legacy native-text workflow
+
+The commands below describe the older PyMuPDF4LLM/pix2tex route. Use the math workflow above for scanned mathematical chapters.
+
 Convert a chapter or page range from an academic PDF to study-ready Markdown. Native text is extracted locally with PyMuPDF4LLM; image formulas can be recognized locally with pix2tex. The script keeps a mini PDF and a JSON manifest so you can inspect the result.
 
 **Best for:** born-digital PDFs with selectable text. **Scanned pages:** detected and stopped by default. `--allow-scanned` saves page images for a person or an agent to transcribe; it does not run general OCR. Figures and uncertain formulas may also need review. The script cannot guarantee a complete transcription without checking `manifest.json`.

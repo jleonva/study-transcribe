@@ -1,0 +1,17 @@
+# Python 3.11; install torch/torchvision from the official CPU wheel index first.
+torch==2.5.1
+torchvision==0.20.1
+pix2text==1.1.7
+transformers==4.46.3
+tokenizers==0.20.3
+optimum[onnxruntime]==1.23.3
+onnxruntime==1.19.2
+numpy==1.26.4
+opencv-python==4.10.0.84
+rapidocr==3.9.1
+PyMuPDF==1.28.2
+cnocr==2.3.3
+cnstd==1.2.8
+huggingface-hub==0.36.2
+doclayout-yolo==0.0.4
+ultralytics==8.4.182
